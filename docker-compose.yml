@@ -1,0 +1,22 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_PATH: /data/data.db
+    volumes:
+      - sqlite_data:/data
+    restart: unless-stopped
+
+  cloudflared-quick:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --url http://app:8000 --no-autoupdate
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  sqlite_data:
