@@ -1,414 +1,1019 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>External App — Chronology</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-:root{
-  --ink:#0C1220; --paper:#F6F5F2; --mist:#EEF0F4; --line:#D8DDE6; --signal:#FF7A00; --action:#1937E3; --muted:#6B7488; --success:#059669;
-  --radius:10px; --radius-sm:8px; --max:1120px;
-}
-*{box-sizing:border-box}
-html{scrollbar-gutter:stable}
-body{margin:0;font-family:Inter,system-ui,-apple-system,sans-serif;background:var(--paper);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
-a{color:var(--action)}
-:focus-visible{outline:2px solid var(--action);outline-offset:2px;border-radius:2px}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-
-/* topbar */
-.topbar{position:sticky;top:0;z-index:20;background:rgba(246,245,242,0.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-.topbar-inner{max-width:var(--max);margin:0 auto;padding:12px 20px;display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.brand{display:flex;gap:10px;align-items:center;font-weight:600;letter-spacing:-0.02em}
-.brand-dot{width:8px;height:8px;border-radius:50%;background:var(--signal);box-shadow:0 0 0 6px rgba(255,122,0,0.12)}
-.brand small{font-weight:400;color:var(--muted);font-size:12px;letter-spacing:0.06em;text-transform:uppercase}
-
-/* manual strip — kept lightweight, reused ids for tests */
-.manual{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
-.manual label{display:flex;flex-direction:column;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);font-weight:600;gap:4px}
-.manual input{width:220px;max-width:38vw;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff;font-family:JetBrains Mono,monospace;font-size:12px}
-.manual input:disabled{background:#f3f4f6;color:var(--muted)}
-.manual input:focus{border-color:var(--action)}
-.btn{appearance:none;border:1px solid var(--action);background:var(--action);color:#fff;padding:8px 16px;border-radius:999px;font-weight:600;font-size:13px;cursor:pointer;letter-spacing:-0.01em}
-.btn:disabled{opacity:0.55;cursor:not-allowed}
-.btn-ghost{background:#fff;color:var(--ink);border-color:var(--line)}
-.btn-ghost:hover{border-color:var(--ink)}
-
-/* banner — auto dismiss 3s after success */
-#statusBanner{display:none;margin:0 auto;max-width:var(--max);background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:10px 14px;border-radius:8px;margin-top:12px}
-#statusBanner.show{display:block}
-
-/* hero */
-.wrap{max-width:var(--max);margin:0 auto;padding:18px 20px}
-.hero{background:var(--ink);color:#fff;border-radius:14px;padding:18px 18px 16px;display:grid;grid-template-columns:1fr 220px;gap:16px;overflow:hidden;position:relative}
-@media(max-width:760px){.hero{grid-template-columns:1fr}}
-.hero::after{content:"";position:absolute;inset:0;background:radial-gradient(600px 220px at 85% -10%, rgba(25,55,227,0.35), transparent 60%);pointer-events:none}
-.hero-main{position:relative;z-index:1}
-.hero-kicker{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-family:JetBrains Mono,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.72)}
-.pill{border:1px solid rgba(255,255,255,0.22);padding:3px 8px;border-radius:999px;background:rgba(255,255,255,0.08)}
-.pill.signal{background:var(--signal);border-color:var(--signal);color:#fff;font-weight:700}
-.hero-title{font-family:Instrument Sans,Inter,sans-serif;font-size:20px;font-weight:600;letter-spacing:-0.03em;margin:8px 0 6px}
-.hero-loc{font-family:Instrument Sans,serif;font-style:italic;color:#cbd5e1;font-size:15px}
-.hero-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:rgba(255,255,255,0.78)}
-.hero-meta span{white-space:nowrap}
-.map-placeholder{position:relative;z-index:1;background:rgba(255,255,255,0.06);border:1px dashed rgba(255,255,255,0.22);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px;text-align:center;color:rgba(255,255,255,0.88);min-height:122px}
-.map-pin{width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--signal);display:grid;place-items:center;box-shadow:0 6px 16px rgba(0,0,0,0.35)}
-.map-pin svg{transform:rotate(45deg)}
-.map-placeholder small{font-family:JetBrains Mono,monospace;font-size:10px;color:rgba(255,255,255,0.66)}
-/* stats pills */
-.stats{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
-.stat{background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;display:flex;gap:8px;align-items:center}
-.stat b{font-family:JetBrains Mono,monospace;font-size:12px}
-.stat small{color:var(--muted)}
-/* toolbar */
-.toolbar{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between}
-.toolbar-left{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px}
-.search{position:relative}
-.search input{width:340px;max-width:42vw;padding:8px 10px 8px 30px;border:1px solid var(--line);border-radius:999px;background:var(--mist);font-size:13px}
-.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);opacity:0.55}
-.toggle{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
-.toggle input{accent-color:var(--action)}
-.count{font-family:JetBrains Mono,monospace;font-size:12px;color:var(--muted)}
-/* empty state — shown before any fetch */
-#emptyState{max-width:var(--max);margin:18px auto 0;padding:28px 22px;background:#fff;border:1px solid var(--line);border-radius:12px;text-align:center}
-#emptyState h2{margin:6px 0 8px;font-size:18px;letter-spacing:-0.02em}
-#emptyState p{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
-#mainContent{display:none}
-#mainContent.ready{display:block}
-/* content grid — widened chronology for readability */
-.shell{margin-top:16px;display:grid;grid-template-columns:minmax(0,1.75fr) minmax(280px,0.95fr);gap:18px;align-items:start}
-@media(max-width:980px){.shell{grid-template-columns:1fr}}
-.card{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.card-h{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:13px;letter-spacing:-0.01em}
-.card-h small{color:var(--muted);font-weight:400;font-family:JetBrains Mono,monospace;font-size:11px}
-.card-b{padding:10px 14px}
-.empty{padding:22px;text-align:center;color:var(--muted);font-size:13px;border:1px dashed var(--line);border-radius:8px;background:var(--mist)}
-/* chronology rail — signature, widened */
-#chronology{position:relative;padding-left:0;min-width:0}
-.rail{position:relative;padding:8px 0}
-.rail::before{content:"";position:absolute;left:54px;top:0;bottom:0;width:1px;background:var(--line)}
-.entry{position:relative;display:grid;grid-template-columns:54px minmax(0,1fr);gap:14px;padding:10px 16px 10px 14px;min-width:0}
-.entry:hover .entry-card{border-color:#c7d2fe;box-shadow:0 4px 16px rgba(25,55,227,0.08)}
-.dot{width:54px;display:flex;justify-content:center;position:relative}
-.dot i{width:32px;height:32px;border-radius:50%;background:#fff;border:1.5px solid var(--line);display:grid;place-items:center;font-family:JetBrains Mono,monospace;font-size:10px;letter-spacing:-0.02em;color:var(--muted);z-index:1}
-.dot.signal i{background:var(--signal);border-color:var(--signal);color:#fff}
-.entry-card{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fff;min-width:0;overflow-wrap:anywhere}
-.entry-meta{font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.entry-body{margin-top:7px;font-size:13.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}
-.entry-body strong{font-weight:600}
-.chip{font-family:JetBrains Mono,monospace;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;padding:2px 6px;border-radius:999px;background:var(--mist);border:1px solid var(--line);color:var(--muted)}
-.chip.system{border-color:#a7f3d0;background:#ecfdf5;color:#065f46}
-.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:12px;padding:6px 0}
-.kv dt{color:var(--muted);font-family:JetBrains Mono,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.04em}
-.kv dd{margin:0;word-break:break-word}
-.divider{height:1px;background:var(--line);margin:8px 0}
-#result{margin:8px 0}
-/* print */
-@media print{
-  .topbar,.toolbar .search,.toggle,#statusBanner,.btn{ display:none !important}
-  .hero{ -webkit-print-color-adjust:exact; print-color-adjust:exact}
-  body{background:#fff}
-}
-</style>
-</head>
-<body>
-<header class="topbar">
-  <div class="topbar-inner">
-    <div class="brand"><span class="brand-dot"></span> External App <small>Chronology · OnCall</small></div>
-    <div class="manual" id="manual">
-      <label for="eventNumber">EventNumber<input id="eventNumber" type="text" placeholder="e.g. SPF-2026082600001" autocomplete="off" /></label>
-      <label for="accessToken">AccessToken<input id="accessToken" type="text" placeholder="paste session token" autocomplete="off" /></label>
-      <button id="fetchBtn" class="btn" type="button">Fetch</button>
-      <button id="printBtn" class="btn btn-ghost" type="button" onclick="window.print()">⎙ Print Report</button>
-    </div>
-  </div>
-</header>
-
-<div id="statusBanner" role="status"></div>
-
-<div id="emptyState" role="status" aria-live="polite">
-  <div style="width:42px;height:42px;border-radius:50%;background:var(--mist);border:1px solid var(--line);display:grid;place-items:center;margin:0 auto 10px;font-size:18px">◷</div>
-  <h2>Data has not yet been fetched</h2>
-  <p>Please manually enter the Event Number and AccessToken above and press Fetch. <br/>If OnCall has pushed an event, it will load automatically.</p>
-</div>
-
-<main class="wrap" id="mainContent">
-  <section class="hero" id="hero">
-    <div class="hero-main">
-      <div class="hero-kicker" id="heroKicker"><span class="pill signal">—</span><span class="pill">—</span><span id="heroId">—</span></div>
-      <div class="hero-title" id="heroTitle">—</div>
-      <div class="hero-loc" id="heroType">—</div>
-      <div class="hero-meta" id="heroMeta">
-        <span>Started —</span><span>Created —</span><span id="heroCoords">—</span>
-      </div>
-      <div class="stats" id="statsRow">
-        <div class="stat"><b id="statUnits">0</b> <small>units</small></div>
-        <div class="stat"><b id="statRemarks">—</b> <small>remarks</small></div>
-        <div class="stat"><b id="statDispo">—</b> <small>dispositions</small></div>
-        <div class="stat"><b id="statCalls">—</b> <small>calls</small></div>
-      </div>
-    </div>
-    <div class="map-placeholder" id="mapPlaceholder" aria-label="map placeholder pin">
-      <div class="map-pin" aria-hidden="true">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11Z"/><circle cx="12" cy="10" r="3"/></svg>
-      </div>
-      <div style="font-size:12px;font-weight:600">Placeholder pin</div>
-      <small id="pinCoords">— · —</small>
-      <small>Map placeholder — pin hidden until location available</small>
-    </div>
-  </section>
-
-  <div class="toolbar">
-    <div class="toolbar-left">
-      <span class="count" id="totalRecords">Total Records: —</span>
-      <label class="search" aria-label="Search within chronology">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
-        <input id="searchInput" type="search" placeholder="Search within event information" />
-      </label>
-      <label class="toggle"><input id="sysToggle" type="checkbox" checked /> Show System Comments</label>
-    </div>
-    <div class="toolbar-left"><span id="result" class="count" aria-live="polite"></span></div>
-  </div>
-
-  <div class="shell">
-    <section class="card" aria-labelledby="chronLabel">
-      <div class="card-h"><span id="chronLabel">Chronology</span> <small id="chronCount">— records</small></div>
-      <div id="chronology" class="rail" aria-live="polite"></div>
-    </section>
-    <div style="display:flex;flex-direction:column;gap:16px">
-      <section class="card"><div class="card-h">Assigned Units <small id="unitsCount"></small></div><div class="card-b" id="unitsBox"></div></section>
-      <section class="card"><div class="card-h">Dispositions <small id="dispoCount"></small></div><div class="card-b" id="dispoBox"></div></section>
-      <section class="card"><div class="card-h">Call <small> / Cross Reference / History</small></div><div class="card-b" id="auxBox"></div></section>
-      <section class="card"><div class="card-h">Event JSON <small>filtered view · /event-view-data</small></div><div class="card-b" id="rawBox" style="font-family:JetBrains Mono,monospace;font-size:11px;max-height:300px;overflow:auto;background:var(--mist);border-radius:8px;padding:8px"></div></section>
-    </div>
-  </div>
-</main>
-
-<script>
-(function(){
-  const $ = (s)=>document.querySelector(s);
-  const accessTokenEl = $("#accessToken");
-  const eventNumberEl = $("#eventNumber");
-  const fetchBtn = $("#fetchBtn");
-  const searchEl = $("#searchInput");
-  const sysToggle = $("#sysToggle");
-  const statusBanner = $("#statusBanner");
-  const resultEl = $("#result");
-  const chronEl = $("#chronology");
-  let bundleCache = null;
-  let lastQuery = "";
-
-  function fmtTime(iso){
-    try{ const d=new Date(iso); if(isNaN(d)) return iso||""; return d.toLocaleString('en-SG',{dateStyle:'short',timeStyle:'medium'}).replace(',',''); }catch{ return iso||""}
-  }
-  function shortTime(iso){
-    try{ const d=new Date(iso); if(isNaN(d)) return "--"; return String(d.getHours()).padStart(2,'0')+":"+String(d.getMinutes()).padStart(2,'0'); }catch{ return "--"}
-  }
-
-  function setReceivedUI(eventNumber){
-    statusBanner.textContent = "AccessToken and EventNumber received for " + eventNumber + ". Fetching event…";
-    statusBanner.classList.add("show");
-    if(accessTokenEl){ accessTokenEl.value=""; accessTokenEl.placeholder="Received — hidden"; accessTokenEl.disabled=true; }
-    if(eventNumberEl){ eventNumberEl.value=eventNumber; eventNumberEl.disabled=true; }
-    if(fetchBtn) fetchBtn.disabled=true;
-    // auto dismiss after 3s per user request #3
-    setTimeout(()=>{ statusBanner.classList.remove("show"); statusBanner.style.display="none"; }, 3000);
-  }
-
-  function showError(msg){
-    resultEl.textContent = msg;
-    resultEl.style.color = "#b91c1c";
-  }
-
-  function renderHero(ev){
-    if(!ev || ev._error) { $("#heroId").textContent = bundleCache?.eventNumber || "—"; return; }
-    const id = ev.agencyEventId || ev.eventNumber || bundleCache?.eventNumber || "—";
-    const prio = ev.priority;
-    const statusTxt = ev.isOpen===false? "Closed" : (ev.statusCode===7? "Pending":"Open");
-    $("#heroId").textContent = id;
-    $("#heroTitle").textContent = ev.locationText || "—";
-    const sub = [ev.agencyEventTypeCode||"—", ev.dispatchGroup? "Grp "+ev.dispatchGroup:"", ev.beat? ev.beat:"", ev.area? "/ "+ev.area:"", ev.esz? "Esz "+ev.esz:""].filter(Boolean).join(" · ");
-    $("#heroType").textContent = sub || ev.agencyEventSubtypeCode || "—";
-    const kicker = document.getElementById("heroKicker");
-    if(kicker){ kicker.innerHTML = `<span class="pill signal">P${prio??1}</span><span class="pill">${statusTxt}</span><span id="heroId">${id}</span>`; }
-    $("#heroMeta").innerHTML = `<span>Started ${fmtTime(ev.startedTime)}</span><span>Created ${fmtTime(ev.addedTime||ev.loiAvailableTime)}</span><span id="heroCoords">${ev.latitude??""}, ${ev.longitude??""}</span>`;
-    const coords = (ev.latitude && ev.longitude) ? `${Number(ev.latitude).toFixed(6)}, ${Number(ev.longitude).toFixed(6)}` : "—";
-    const pin = $("#pinCoords"); if(pin) pin.textContent = coords + " · " + (ev.area||"");
-  }
-
-  function renderStats(bundle){
-    const units = Array.isArray(bundle.assignedUnits)? bundle.assignedUnits.length : 0;
-    const comments = bundle.comments && bundle.comments.data ? bundle.comments.data.length : (Array.isArray(bundle.comments)? bundle.comments.length:0);
-    const dispo = Array.isArray(bundle.dispositions)? bundle.dispositions.length : 0;
-    const calls = Array.isArray(bundle.calls)? bundle.calls.length : 0;
-    $("#statUnits").textContent = String(units);
-    $("#statRemarks").textContent = String(comments||0);
-    $("#statDispo").textContent = String(dispo||0);
-    $("#statCalls").textContent = String(calls||0);
-    $("#totalRecords").textContent = "Total Records: " + String(bundle.comments?.total ?? comments ?? 0);
-    $("#chronCount").textContent = (comments||0) + " records";
-    $("#unitsCount").textContent = units? units+"": "";
-    $("#dispoCount").textContent = dispo? dispo+"": "";
-  }
-
-  function renderUnits(arr){
-    const box = $("#unitsBox"); box.innerHTML="";
-    if(!arr || !arr.length || arr._error){ const d=document.createElement("div"); d.className="empty"; d.textContent = arr && arr._error ? "Units unavailable." : "No units assigned yet."; box.appendChild(d); return; }
-    arr.forEach(u=>{
-      const div=document.createElement("div"); div.style.padding="8px 0"; div.style.borderBottom="1px solid var(--line)";
-      div.innerHTML = `<div style="font-weight:600;font-size:13px">${u.unitId||"—"} <span class="chip">${u.unitType||u.status||""}</span></div><div style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted)">${u.location||""} · ${u.beat||""} · ${u.stationId||""}</div>`;
-      box.appendChild(div);
-    });
-  }
-  function renderDispo(arr){
-    const box=$("#dispoBox"); box.innerHTML="";
-    if(!arr || !arr.length || arr._error){ const d=document.createElement("div"); d.className="empty"; d.textContent = arr && arr._error ? "Dispositions unavailable." : "No dispositions recorded."; box.appendChild(d); return; }
-    arr.forEach(d=>{
-      const div=document.createElement("div"); div.style.padding="6px 0"; div.style.borderBottom="1px solid var(--line)";
-      div.innerHTML = `<span class="chip">${d.dispositionTypeCode||"—"}</span> <span style="font-size:13px">${d.unitId||""} · Emp ${d.unitEmployeeId??""}</span>`;
-      box.appendChild(div);
-    });
-  }
-  function renderAux(bundle){
-    const box=$("#auxBox"); box.innerHTML="";
-    const mk = (label, val)=>{
-      const wrap=document.createElement("div"); wrap.style.marginBottom="8px";
-      const h=document.createElement("div"); h.style.fontSize="11px"; h.style.letterSpacing="0.06em"; h.style.textTransform="uppercase"; h.style.color="var(--muted)"; h.textContent=label;
-      const b=document.createElement("div"); b.style.fontSize="13px"; b.textContent = (Array.isArray(val)? (val.length? JSON.stringify(val).slice(0,240): "— (empty)") : (val && val.data? (val.data.length? JSON.stringify(val.data).slice(0,240): "— (empty)"): JSON.stringify(val).slice(0,240)));
-      if(val && val._error){ b.textContent = "Error: "+ (val._error||val.error); b.style.color="#b91c1c"; }
-      wrap.appendChild(h); wrap.appendChild(b); return wrap;
-    };
-    box.appendChild(mk("Call", bundle.calls));
-    box.appendChild(mk("CrossReference", bundle.crossReference));
-    box.appendChild(mk("History", bundle.history));
-  }
-
-  function buildChronology(bundle){
-    const comments = (bundle.comments && bundle.comments.data) ? bundle.comments.data : (Array.isArray(bundle.comments)? bundle.comments: []);
-    const ev = bundle.event;
-    // virtual event-created entry at addedTime
-    const entries = [];
-    if(ev && !ev._error && ev.addedTime){
-      entries.push({t: ev.addedTime, system:false, user: ev.createdEmployeeId? String(ev.createdEmployeeId): (ev.createdEmployeeId===0?"0":"System"), label:"Event created", text: `Location: ${ev.locationText||"—"}, Type: ${ev.agencyEventTypeCode||"—"}, SubType: ${ev.agencyEventSubtypeCode||"default"}, Agency: ${ev.agencyId||"—"}, Group: ${ev.dispatchGroup||"—"}, Beat: ${ev.beat||"—"}, Area: ${ev.area||"—"}, Esz: ${ev.esz??""}, Priority: ${ev.priority??""}, Status: P, Custom Data: ${ev.customData||""}`});
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>External App — Chronology</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --ink: #0C1220;
+      --paper: #F6F5F2;
+      --mist: #EEF0F4;
+      --line: #D8DDE6;
+      --signal: #FF7A00;
+      --action: #1937E3;
+      --muted: #6B7488;
+      --success: #059669;
+      --radius: 10px;
+      --radius-sm: 8px;
+      --max: 1120px;
     }
-    comments.forEach(c=>{
-      const txt = c.commentText || c.adornedCommentText || "";
-      // Heuristic: remarks lines contain "**"
-      entries.push({t: c.createdTime, system: !!c.isSystemComment, user: c.createdEmployeeName?.trim()? c.createdEmployeeName.trim() + (c.createdEmployeeId? ` (${c.createdEmployeeId})`:"") : (c.createdEmployeeId===0?"(0)":String(c.createdEmployeeId||"—")), label: c.isSystemComment? "System":"Remark", text: txt});
-    });
-    // sort asc by time
-    entries.sort((a,b)=> new Date(a.t) - new Date(b.t));
-    return entries;
-  }
 
-  function renderChronology(entries, filterText, showSystem){
-    chronEl.innerHTML="";
-    const q = (filterText||"").toLowerCase();
-    let visible=0;
-    entries.forEach((e)=>{
-      const hay = (e.text+" "+e.label+" "+e.user+" "+e.t).toLowerCase();
-      if(q && !hay.includes(q)) return;
-      if(!showSystem && e.system) return;
-      visible++;
-      const row=document.createElement("div"); row.className="entry";
-      const dot=document.createElement("div"); dot.className="dot"; if(e.label==="Event created") dot.classList.add("signal");
-      const b=document.createElement("i"); b.textContent = shortTime(e.t); dot.appendChild(b);
-      const card=document.createElement("div"); card.className="entry-card";
-      const meta=document.createElement("div"); meta.className="entry-meta";
-      meta.innerHTML = `<span>${fmtTime(e.t)}</span><span>${e.user||"—"}</span><span class="chip ${e.system?'system':''}">${e.label}</span>`;
-      const body=document.createElement("div"); body.className="entry-body"; body.textContent = e.text || "—";
-      card.appendChild(meta); card.appendChild(body);
-      row.appendChild(dot); row.appendChild(card);
-      chronEl.appendChild(row);
-    });
-    if(visible===0){
-      const empty=document.createElement("div"); empty.className="empty"; empty.style.margin="12px"; empty.textContent = q? "No matches for “"+filterText+"”. Clear search to see all records." : "No chronology records yet.";
-      chronEl.appendChild(empty);
+    * {
+      box-sizing: border-box
     }
-    $("#chronCount").textContent = visible + " shown";
-  }
 
-  async function fetchBundle(){
-    resultEl.textContent = "Loading…"; resultEl.style.color="var(--muted)";
-    // Prefer server store; allow manual fallback via query if fields still enabled
-    const manualToken = !accessTokenEl.disabled ? accessTokenEl.value.trim() : "";
-    const manualEvent = !eventNumberEl.disabled ? eventNumberEl.value.trim() : "";
-    let url = "/event-view-bundle";
-    if(manualToken || manualEvent){
-      const qs = new URLSearchParams(); if(manualToken) qs.set("accessToken", manualToken); if(manualEvent) qs.set("eventNumber", manualEvent);
-      url += "?" + qs.toString();
+    html {
+      scrollbar-gutter: stable
     }
-    try{
-      const r = await fetch(url);
-      let payload; try{ payload = await r.json(); }catch{ payload = { _error: "Invalid response", _status: r.status }; }
-      if(!r.ok){
-        showError(payload.error || payload._error || "Failed to fetch");
-        return;
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased
+    }
+
+    a {
+      color: var(--action)
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--action);
+      outline-offset: 2px;
+      border-radius: 2px
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+      * {
+        animation: none !important;
+        transition: none !important
       }
-      bundleCache = payload;
-      // reveal main content, hide single empty-state block
-      const emptyState = document.getElementById("emptyState");
-      const mainContent = document.getElementById("mainContent");
-      if(emptyState) emptyState.style.display="none";
-      if(mainContent) mainContent.classList.add("ready");
-      renderHero(payload.event);
-      renderStats(payload);
-      renderUnits(payload.assignedUnits);
-      renderDispo(payload.dispositions);
-      renderAux(payload);
-      const entries = buildChronology(payload);
-      // stash for search toggle
-      chronEl._entries = entries;
-      renderChronology(entries, lastQuery, sysToggle.checked);
-      // raw json box (filtered view) — keep Key/Value hint for old test
-      $("#rawBox").textContent = JSON.stringify(payload.event||{}, null, 2).slice(0, 8000);
-      resultEl.textContent = "Fetched " + (payload.eventNumber||"") + " · " + new Date(payload.fetchedAt).toLocaleTimeString();
-      resultEl.style.color = "var(--success)";
-    }catch(err){
-      showError("Request failed: " + err);
     }
-  }
 
-  // wiring
-  if(fetchBtn){
-    fetchBtn.addEventListener("click", function(){
-      const needManual = !accessTokenEl.disabled || !eventNumberEl.disabled;
-      if(needManual){
-        if(!accessTokenEl.value.trim() || !eventNumberEl.value.trim()){
-          resultEl.textContent = "AccessToken and EventNumber are required.";
-          resultEl.style.color="#b91c1c"; return;
+    /* topbar */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(246, 245, 242, 0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line)
+    }
+
+    .topbar-inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 12px 20px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap
+    }
+
+    .brand {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      font-weight: 600;
+      letter-spacing: -0.02em
+    }
+
+    .brand-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--signal);
+      box-shadow: 0 0 0 6px rgba(255, 122, 0, 0.12)
+    }
+
+    .brand small {
+      font-weight: 400;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase
+    }
+
+    /* manual strip — kept lightweight, reused ids for tests */
+    .manual {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: end
+    }
+
+    .manual label {
+      display: flex;
+      flex-direction: column;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+      gap: 4px
+    }
+
+    .manual input {
+      width: 220px;
+      max-width: 38vw;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      font-family: JetBrains Mono, monospace;
+      font-size: 12px
+    }
+
+    .manual input:disabled {
+      background: #f3f4f6;
+      color: var(--muted)
+    }
+
+    .manual input:focus {
+      border-color: var(--action)
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--action);
+      background: var(--action);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      letter-spacing: -0.01em
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed
+    }
+
+    .btn-ghost {
+      background: #fff;
+      color: var(--ink);
+      border-color: var(--line)
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--ink)
+    }
+
+    /* banner — auto dismiss 3s after success */
+    #statusBanner {
+      display: none;
+      margin: 0 auto;
+      max-width: var(--max);
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #065f46;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-top: 12px
+    }
+
+    #statusBanner.show {
+      display: block
+    }
+
+    /* hero */
+    .wrap {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 18px 20px
+    }
+
+    .hero {
+      background: var(--ink);
+      color: #fff;
+      border-radius: 14px;
+      padding: 18px 18px 16px;
+      display: grid;
+      grid-template-columns: 1fr 220px;
+      gap: 16px;
+      overflow: hidden;
+      position: relative
+    }
+
+    @media(max-width:760px) {
+      .hero {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(600px 220px at 85% -10%, rgba(25, 55, 227, 0.35), transparent 60%);
+      pointer-events: none
+    }
+
+    .hero-main {
+      position: relative;
+      z-index: 1
+    }
+
+    .hero-kicker {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      font-family: JetBrains Mono, monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.72)
+    }
+
+    .pill {
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08)
+    }
+
+    .pill.signal {
+      background: var(--signal);
+      border-color: var(--signal);
+      color: #fff;
+      font-weight: 700
+    }
+
+    .hero-title {
+      font-family: Instrument Sans, Inter, sans-serif;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      margin: 8px 0 6px
+    }
+
+    .hero-loc {
+      font-family: Instrument Sans, serif;
+      font-style: italic;
+      color: #cbd5e1;
+      font-size: 15px
+    }
+
+    .hero-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.78)
+    }
+
+    .hero-meta span {
+      white-space: nowrap
+    }
+
+    .map-placeholder {
+      position: relative;
+      z-index: 1;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px dashed rgba(255, 255, 255, 0.22);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 14px;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.88);
+      min-height: 122px
+    }
+
+    .map-pin {
+      width: 28px;
+      height: 28px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      background: var(--signal);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35)
+    }
+
+    .map-pin svg {
+      transform: rotate(45deg)
+    }
+
+    .map-placeholder small {
+      font-family: JetBrains Mono, monospace;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.66)
+    }
+
+    /* stats pills */
+    .stats {
+      margin-top: 14px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    .stat {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      display: flex;
+      gap: 8px;
+      align-items: center
+    }
+
+    .stat b {
+      font-family: JetBrains Mono, monospace;
+      font-size: 12px
+    }
+
+    .stat small {
+      color: var(--muted)
+    }
+
+    /* toolbar */
+    .toolbar {
+      margin-top: 16px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: space-between
+    }
+
+    .toolbar-left {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      font-size: 13px
+    }
+
+    .search {
+      position: relative
+    }
+
+    .search input {
+      width: 340px;
+      max-width: 42vw;
+      padding: 8px 10px 8px 30px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--mist);
+      font-size: 13px
+    }
+
+    .search svg {
+      position: absolute;
+      left: 9px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0.55
+    }
+
+    .toggle {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+      color: var(--muted)
+    }
+
+    .toggle input {
+      accent-color: var(--action)
+    }
+
+    .count {
+      font-family: JetBrains Mono, monospace;
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    /* empty state — shown before any fetch */
+    #emptyState {
+      max-width: var(--max);
+      margin: 18px auto 0;
+      padding: 28px 22px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      text-align: center
+    }
+
+    #emptyState h2 {
+      margin: 6px 0 8px;
+      font-size: 18px;
+      letter-spacing: -0.02em
+    }
+
+    #emptyState p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6
+    }
+
+    #mainContent {
+      display: none
+    }
+
+    #mainContent.ready {
+      display: block
+    }
+
+    /* content grid — widened chronology for readability */
+    .shell {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.75fr) minmax(280px, 0.95fr);
+      gap: 18px;
+      align-items: start
+    }
+
+    @media(max-width:980px) {
+      .shell {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden
+    }
+
+    .card-h {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: -0.01em
+    }
+
+    .card-h small {
+      color: var(--muted);
+      font-weight: 400;
+      font-family: JetBrains Mono, monospace;
+      font-size: 11px
+    }
+
+    .card-b {
+      padding: 10px 14px
+    }
+
+    .empty {
+      padding: 22px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: var(--mist)
+    }
+
+    /* chronology rail — signature, widened */
+    #chronology {
+      position: relative;
+      padding-left: 0;
+      min-width: 0
+    }
+
+    .rail {
+      position: relative;
+      padding: 8px 0
+    }
+
+    .rail::before {
+      content: "";
+      position: absolute;
+      left: 54px;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: var(--line)
+    }
+
+    .entry {
+      position: relative;
+      display: grid;
+      grid-template-columns: 54px minmax(0, 1fr);
+      gap: 14px;
+      padding: 10px 16px 10px 14px;
+      min-width: 0
+    }
+
+    .entry:hover .entry-card {
+      border-color: #c7d2fe;
+      box-shadow: 0 4px 16px rgba(25, 55, 227, 0.08)
+    }
+
+    .dot {
+      width: 54px;
+      display: flex;
+      justify-content: center;
+      position: relative
+    }
+
+    .dot i {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #fff;
+      border: 1.5px solid var(--line);
+      display: grid;
+      place-items: center;
+      font-family: JetBrains Mono, monospace;
+      font-size: 10px;
+      letter-spacing: -0.02em;
+      color: var(--muted);
+      z-index: 1
+    }
+
+    .dot.signal i {
+      background: var(--signal);
+      border-color: var(--signal);
+      color: #fff
+    }
+
+    .entry-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 14px;
+      background: #fff;
+      min-width: 0;
+      overflow-wrap: anywhere
+    }
+
+    .entry-meta {
+      font-family: JetBrains Mono, monospace;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center
+    }
+
+    .entry-body {
+      margin-top: 7px;
+      font-size: 13.5px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere
+    }
+
+    .entry-body strong {
+      font-weight: 600
+    }
+
+    .chip {
+      font-family: JetBrains Mono, monospace;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: var(--mist);
+      border: 1px solid var(--line);
+      color: var(--muted)
+    }
+
+    .chip.system {
+      border-color: #a7f3d0;
+      background: #ecfdf5;
+      color: #065f46
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 6px 12px;
+      font-size: 12px;
+      padding: 6px 0
+    }
+
+    .kv dt {
+      color: var(--muted);
+      font-family: JetBrains Mono, monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em
+    }
+
+    .kv dd {
+      margin: 0;
+      word-break: break-word
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--line);
+      margin: 8px 0
+    }
+
+    #result {
+      margin: 8px 0
+    }
+
+    /* print */
+    @media print {
+
+      .topbar,
+      .toolbar .search,
+      .toggle,
+      #statusBanner,
+      .btn {
+        display: none !important
+      }
+
+      .hero {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact
+      }
+
+      body {
+        background: #fff
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span class="brand-dot"></span> External App <small>Chronology · OnCall</small></div>
+      <div class="manual" id="manual">
+        <label for="eventNumber">EventNumber<input id="eventNumber" type="text" placeholder="e.g. SPF-2026082600001"
+            autocomplete="off" /></label>
+        <label for="sessionToken">SessionToken<input id="sessionToken" type="text" placeholder="paste session token"
+            autocomplete="off" /></label>
+        <button id="fetchBtn" class="btn" type="button">Fetch</button>
+        <button id="printBtn" class="btn btn-ghost" type="button" onclick="window.print()">⎙ Print Report</button>
+        <button id="exportBtn" class="btn btn-ghost" type="button">⇩ Export XLSX</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="statusBanner" role="status"></div>
+
+  <div id="emptyState" role="status" aria-live="polite">
+    <div
+      style="width:42px;height:42px;border-radius:50%;background:var(--mist);border:1px solid var(--line);display:grid;place-items:center;margin:0 auto 10px;font-size:18px">
+      ◷</div>
+    <h2>Data has not yet been fetched</h2>
+    <p>Please manually enter the Event Number and SessionToken above and press Fetch. <br />If OnCall has pushed an
+      event, it will load automatically.</p>
+  </div>
+
+  <main class="wrap" id="mainContent">
+    <section class="hero" id="hero">
+      <div class="hero-main">
+        <div class="hero-kicker" id="heroKicker"><span class="pill signal">—</span><span class="pill">—</span><span
+            id="heroId">—</span></div>
+        <div class="hero-title" id="heroTitle">—</div>
+        <div class="hero-loc" id="heroType">—</div>
+        <div class="hero-meta" id="heroMeta">
+          <span>Started —</span><span>Created —</span><span id="heroCoords">—</span>
+        </div>
+        <div class="stats" id="statsRow">
+          <div class="stat"><b id="statUnits">0</b> <small>units</small></div>
+          <div class="stat"><b id="statRemarks">—</b> <small>remarks</small></div>
+          <div class="stat"><b id="statDispo">—</b> <small>dispositions</small></div>
+          <div class="stat"><b id="statCalls">—</b> <small>calls</small></div>
+        </div>
+      </div>
+      <div class="map-placeholder" id="mapPlaceholder" aria-label="map placeholder pin">
+        <div class="map-pin" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11Z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+        </div>
+        <div style="font-size:12px;font-weight:600">Placeholder pin</div>
+        <small id="pinCoords">— · —</small>
+        <small>Map placeholder — pin hidden until location available</small>
+      </div>
+    </section>
+
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <span class="count" id="totalRecords">Total Records: —</span>
+        <label class="search" aria-label="Search within chronology">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3-3" />
+          </svg>
+          <input id="searchInput" type="search" placeholder="Search within event information" />
+        </label>
+        <label class="toggle"><input id="sysToggle" type="checkbox" checked /> Show System Comments</label>
+      </div>
+      <div class="toolbar-left"><span id="result" class="count" aria-live="polite"></span></div>
+    </div>
+
+    <div class="shell">
+      <section class="card" aria-labelledby="chronLabel">
+        <div class="card-h"><span id="chronLabel">Chronology</span> <small id="chronCount">— records</small></div>
+        <div id="chronology" class="rail" aria-live="polite"></div>
+      </section>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <section class="card">
+          <div class="card-h">Assigned Units <small id="unitsCount"></small></div>
+          <div class="card-b" id="unitsBox"></div>
+        </section>
+        <section class="card">
+          <div class="card-h">Dispositions <small id="dispoCount"></small></div>
+          <div class="card-b" id="dispoBox"></div>
+        </section>
+        <section class="card">
+          <div class="card-h">Call <small> / Cross Reference / History</small></div>
+          <div class="card-b" id="auxBox"></div>
+        </section>
+        <section class="card">
+          <div class="card-h">Event JSON <small>filtered view · /event-view-data</small></div>
+          <div class="card-b" id="rawBox"
+            style="font-family:JetBrains Mono,monospace;font-size:11px;max-height:300px;overflow:auto;background:var(--mist);border-radius:8px;padding:8px">
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const $ = (s) => document.querySelector(s);
+      const sessionTokenEl = $("#sessionToken");
+      const eventNumberEl = $("#eventNumber");
+      const fetchBtn = $("#fetchBtn");
+      const searchEl = $("#searchInput");
+      const sysToggle = $("#sysToggle");
+      const statusBanner = $("#statusBanner");
+      const resultEl = $("#result");
+      const chronEl = $("#chronology");
+      let bundleCache = null;
+      let lastQuery = "";
+
+      function fmtTime(iso) {
+        try { const d = new Date(iso); if (isNaN(d)) return iso || ""; return d.toLocaleString('en-SG', { dateStyle: 'short', timeStyle: 'medium' }).replace(',', ''); } catch { return iso || "" }
+      }
+      function shortTime(iso) {
+        try { const d = new Date(iso); if (isNaN(d)) return "--"; return String(d.getHours()).padStart(2, '0') + ":" + String(d.getMinutes()).padStart(2, '0'); } catch { return "--" }
+      }
+
+      function setReceivedUI(eventNumber) {
+        statusBanner.textContent = "SessionToken and EventNumber received for " + eventNumber + ". Fetching event…";
+        statusBanner.classList.add("show");
+        if (sessionTokenEl) { sessionTokenEl.value = ""; sessionTokenEl.placeholder = "Received — hidden"; sessionTokenEl.disabled = true; }
+        if (eventNumberEl) { eventNumberEl.value = eventNumber; eventNumberEl.disabled = true; }
+        if (fetchBtn) fetchBtn.disabled = true;
+        // auto dismiss after 3s per user request #3
+        setTimeout(() => { statusBanner.classList.remove("show"); statusBanner.style.display = "none"; }, 3000);
+      }
+
+      function showError(msg) {
+        resultEl.textContent = msg;
+        resultEl.style.color = "#b91c1c";
+      }
+
+      function renderHero(ev) {
+        if (!ev || ev._error) { $("#heroId").textContent = bundleCache?.eventNumber || "—"; return; }
+        const id = ev.agencyEventId || ev.eventNumber || bundleCache?.eventNumber || "—";
+        const prio = ev.priority;
+        const statusTxt = ev.isOpen === false ? "Closed" : (ev.statusCode === 7 ? "Pending" : "Open");
+        $("#heroId").textContent = id;
+        $("#heroTitle").textContent = ev.locationText || "—";
+        const sub = [ev.agencyEventTypeCode || "—", ev.dispatchGroup ? "Grp " + ev.dispatchGroup : "", ev.beat ? ev.beat : "", ev.area ? "/ " + ev.area : "", ev.esz ? "Esz " + ev.esz : ""].filter(Boolean).join(" · ");
+        $("#heroType").textContent = sub || ev.agencyEventSubtypeCode || "—";
+        const kicker = document.getElementById("heroKicker");
+        if (kicker) { kicker.innerHTML = `<span class="pill signal">P${prio ?? 1}</span><span class="pill">${statusTxt}</span><span id="heroId">${id}</span>`; }
+        $("#heroMeta").innerHTML = `<span>Started ${fmtTime(ev.startedTime)}</span><span>Created ${fmtTime(ev.addedTime || ev.loiAvailableTime)}</span><span id="heroCoords">${ev.latitude ?? ""}, ${ev.longitude ?? ""}</span>`;
+        const coords = (ev.latitude && ev.longitude) ? `${Number(ev.latitude).toFixed(6)}, ${Number(ev.longitude).toFixed(6)}` : "—";
+        const pin = $("#pinCoords"); if (pin) pin.textContent = coords + " · " + (ev.area || "");
+      }
+
+      function renderStats(bundle) {
+        const units = Array.isArray(bundle.assignedUnits) ? bundle.assignedUnits.length : 0;
+        const comments = bundle.comments && bundle.comments.data ? bundle.comments.data.length : (Array.isArray(bundle.comments) ? bundle.comments.length : 0);
+        const dispo = Array.isArray(bundle.dispositions) ? bundle.dispositions.length : 0;
+        const calls = Array.isArray(bundle.calls) ? bundle.calls.length : 0;
+        $("#statUnits").textContent = String(units);
+        $("#statRemarks").textContent = String(comments || 0);
+        $("#statDispo").textContent = String(dispo || 0);
+        $("#statCalls").textContent = String(calls || 0);
+        $("#totalRecords").textContent = "Total Records: " + String(bundle.comments?.total ?? comments ?? 0);
+        $("#chronCount").textContent = (comments || 0) + " records";
+        $("#unitsCount").textContent = units ? units + "" : "";
+        $("#dispoCount").textContent = dispo ? dispo + "" : "";
+      }
+
+      function renderUnits(arr) {
+        const box = $("#unitsBox"); box.innerHTML = "";
+        if (!arr || !arr.length || arr._error) { const d = document.createElement("div"); d.className = "empty"; d.textContent = arr && arr._error ? "Units unavailable." : "No units assigned yet."; box.appendChild(d); return; }
+        arr.forEach(u => {
+          const div = document.createElement("div"); div.style.padding = "8px 0"; div.style.borderBottom = "1px solid var(--line)";
+          div.innerHTML = `<div style="font-weight:600;font-size:13px">${u.unitId || "—"} <span class="chip">${u.unitType || u.status || ""}</span></div><div style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted)">${u.location || ""} · ${u.beat || ""} · ${u.stationId || ""}</div>`;
+          box.appendChild(div);
+        });
+      }
+      function renderDispo(arr) {
+        const box = $("#dispoBox"); box.innerHTML = "";
+        if (!arr || !arr.length || arr._error) { const d = document.createElement("div"); d.className = "empty"; d.textContent = arr && arr._error ? "Dispositions unavailable." : "No dispositions recorded."; box.appendChild(d); return; }
+        arr.forEach(d => {
+          const div = document.createElement("div"); div.style.padding = "6px 0"; div.style.borderBottom = "1px solid var(--line)";
+          div.innerHTML = `<span class="chip">${d.dispositionTypeCode || "—"}</span> <span style="font-size:13px">${d.unitId || ""} · Emp ${d.unitEmployeeId ?? ""}</span>`;
+          box.appendChild(div);
+        });
+      }
+      function renderAux(bundle) {
+        const box = $("#auxBox"); box.innerHTML = "";
+        const mk = (label, val) => {
+          const wrap = document.createElement("div"); wrap.style.marginBottom = "8px";
+          const h = document.createElement("div"); h.style.fontSize = "11px"; h.style.letterSpacing = "0.06em"; h.style.textTransform = "uppercase"; h.style.color = "var(--muted)"; h.textContent = label;
+          const b = document.createElement("div"); b.style.fontSize = "13px"; b.textContent = (Array.isArray(val) ? (val.length ? JSON.stringify(val).slice(0, 240) : "— (empty)") : (val && val.data ? (val.data.length ? JSON.stringify(val.data).slice(0, 240) : "— (empty)") : JSON.stringify(val).slice(0, 240)));
+          if (val && val._error) { b.textContent = "Error: " + (val._error || val.error); b.style.color = "#b91c1c"; }
+          wrap.appendChild(h); wrap.appendChild(b); return wrap;
+        };
+        box.appendChild(mk("Call", bundle.calls));
+        box.appendChild(mk("CrossReference", bundle.crossReference));
+        box.appendChild(mk("History", bundle.history));
+      }
+
+      function buildChronology(bundle) {
+        const comments = (bundle.comments && bundle.comments.data) ? bundle.comments.data : (Array.isArray(bundle.comments) ? bundle.comments : []);
+        const ev = bundle.event;
+        // virtual event-created entry at addedTime
+        const entries = [];
+        if (ev && !ev._error && ev.addedTime) {
+          entries.push({ t: ev.addedTime, system: false, user: ev.createdEmployeeId ? String(ev.createdEmployeeId) : (ev.createdEmployeeId === 0 ? "0" : "System"), label: "Event created", text: `Location: ${ev.locationText || "—"}, Type: ${ev.agencyEventTypeCode || "—"}, SubType: ${ev.agencyEventSubtypeCode || "default"}, Agency: ${ev.agencyId || "—"}, Group: ${ev.dispatchGroup || "—"}, Beat: ${ev.beat || "—"}, Area: ${ev.area || "—"}, Esz: ${ev.esz ?? ""}, Priority: ${ev.priority ?? ""}, Status: P, Custom Data: ${ev.customData || ""}` });
+        }
+        comments.forEach(c => {
+          const txt = c.commentText || c.adornedCommentText || "";
+          // Heuristic: remarks lines contain "**"
+          entries.push({ t: c.createdTime, system: !!c.isSystemComment, user: c.createdEmployeeName?.trim() ? c.createdEmployeeName.trim() + (c.createdEmployeeId ? ` (${c.createdEmployeeId})` : "") : (c.createdEmployeeId === 0 ? "(0)" : String(c.createdEmployeeId || "—")), label: c.isSystemComment ? "System" : "Remark", text: txt });
+        });
+        // sort asc by time
+        entries.sort((a, b) => new Date(a.t) - new Date(b.t));
+        return entries;
+      }
+
+      function renderChronology(entries, filterText, showSystem) {
+        chronEl.innerHTML = "";
+        const q = (filterText || "").toLowerCase();
+        let visible = 0;
+        entries.forEach((e) => {
+          const hay = (e.text + " " + e.label + " " + e.user + " " + e.t).toLowerCase();
+          if (q && !hay.includes(q)) return;
+          if (!showSystem && e.system) return;
+          visible++;
+          const row = document.createElement("div"); row.className = "entry";
+          const dot = document.createElement("div"); dot.className = "dot"; if (e.label === "Event created") dot.classList.add("signal");
+          const b = document.createElement("i"); b.textContent = shortTime(e.t); dot.appendChild(b);
+          const card = document.createElement("div"); card.className = "entry-card";
+          const meta = document.createElement("div"); meta.className = "entry-meta";
+          meta.innerHTML = `<span>${fmtTime(e.t)}</span><span>${e.user || "—"}</span><span class="chip ${e.system ? 'system' : ''}">${e.label}</span>`;
+          const body = document.createElement("div"); body.className = "entry-body"; body.textContent = e.text || "—";
+          card.appendChild(meta); card.appendChild(body);
+          row.appendChild(dot); row.appendChild(card);
+          chronEl.appendChild(row);
+        });
+        if (visible === 0) {
+          const empty = document.createElement("div"); empty.className = "empty"; empty.style.margin = "12px"; empty.textContent = q ? "No matches for “" + filterText + "”. Clear search to see all records." : "No chronology records yet.";
+          chronEl.appendChild(empty);
+        }
+        $("#chronCount").textContent = visible + " shown";
+      }
+
+      async function fetchBundle() {
+        resultEl.textContent = "Loading…"; resultEl.style.color = "var(--muted)";
+        // Prefer server store; allow manual fallback via query if fields still enabled
+        const manualToken = !sessionTokenEl.disabled ? sessionTokenEl.value.trim() : "";
+        const manualEvent = !eventNumberEl.disabled ? eventNumberEl.value.trim() : "";
+        let url = "/event-view-bundle";
+        if (manualToken || manualEvent) {
+          const qs = new URLSearchParams(); if (manualToken) qs.set("sessionToken", manualToken); if (manualEvent) qs.set("eventNumber", manualEvent);
+          url += "?" + qs.toString();
+        }
+        try {
+          const r = await fetch(url);
+          let payload; try { payload = await r.json(); } catch { payload = { _error: "Invalid response", _status: r.status }; }
+          if (!r.ok) {
+            showError(payload.error || payload._error || "Failed to fetch");
+            return;
+          }
+          bundleCache = payload;
+          // reveal main content, hide single empty-state block
+          const emptyState = document.getElementById("emptyState");
+          const mainContent = document.getElementById("mainContent");
+          if (emptyState) emptyState.style.display = "none";
+          if (mainContent) mainContent.classList.add("ready");
+          renderHero(payload.event);
+          renderStats(payload);
+          renderUnits(payload.assignedUnits);
+          renderDispo(payload.dispositions);
+          renderAux(payload);
+          const entries = buildChronology(payload);
+          // stash for search toggle
+          chronEl._entries = entries;
+          renderChronology(entries, lastQuery, sysToggle.checked);
+          // raw json box (filtered view) — keep Key/Value hint for old test
+          $("#rawBox").textContent = JSON.stringify(payload.event || {}, null, 2).slice(0, 8000);
+          resultEl.textContent = "Fetched " + (payload.eventNumber || "") + " · " + new Date(payload.fetchedAt).toLocaleTimeString();
+          resultEl.style.color = "var(--success)";
+        } catch (err) {
+          showError("Request failed: " + err);
         }
       }
-      fetchBundle();
-    });
-  }
-  if(searchEl){ searchEl.addEventListener("input", ()=>{ lastQuery = searchEl.value; if(chronEl._entries) renderChronology(chronEl._entries, lastQuery, sysToggle.checked); }); }
-  if(sysToggle){ sysToggle.addEventListener("change", ()=>{ if(chronEl._entries) renderChronology(chronEl._entries, lastQuery, sysToggle.checked); }); }
 
-  // Poll server for push via POST /receive -> fetch bundle when received
-  let received=false;
-  async function pollReceive(){
-    try{
-      const r = await fetch("/view-event-status");
-      if(!r.ok) return;
-      const s = await r.json();
-      if(s.received && s.eventNumber && !received){
-        received=true;
-        setReceivedUI(s.eventNumber);
-        fetchBundle();
+      // wiring
+      if (fetchBtn) {
+        fetchBtn.addEventListener("click", function () {
+          const needManual = !sessionTokenEl.disabled || !eventNumberEl.disabled;
+          if (needManual) {
+            if (!sessionTokenEl.value.trim() || !eventNumberEl.value.trim()) {
+              resultEl.textContent = "SessionToken and EventNumber are required.";
+              resultEl.style.color = "#b91c1c"; return;
+            }
+          }
+          fetchBundle();
+        });
       }
-    }catch(e){/* ignore */}
-  }
-  pollReceive();
-  setInterval(pollReceive, 1500);
+      // ponytail: exports only the currently loaded event; add multi-select when batch export from the page matters
+      const exportBtn = $("#exportBtn");
+      if (exportBtn) {
+        exportBtn.addEventListener("click", async function () {
+          const id = (bundleCache && bundleCache.eventNumber) || eventNumberEl.value.trim();
+          if (!id) {
+            statusBanner.textContent = "Fetch an event first, then export.";
+            statusBanner.classList.add("show"); statusBanner.style.display = "block";
+            setTimeout(() => { statusBanner.classList.remove("show"); statusBanner.style.display = "none"; }, 3000);
+            return;
+          }
+          const body = { EventNumbers: [id] };
+          if (!sessionTokenEl.disabled && sessionTokenEl.value.trim()) body.SessionToken = sessionTokenEl.value.trim();
+          resultEl.textContent = "Exporting…"; resultEl.style.color = "var(--muted)";
+          try {
+            const r = await fetch("/export-events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+            if (!r.ok) { let m = "Export failed"; try { m = (await r.json()).error || m; } catch (_) { /* keep default */ } showError(m); return; }
+            const blob = await r.blob();
+            const cd = r.headers.get("Content-Disposition") || "";
+            const fn = (cd.match(/filename="([^"]+)"/) || [])[1] || ("export_" + id + ".xlsx");
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = fn;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+            resultEl.textContent = "Exported " + id; resultEl.style.color = "var(--success)";
+          } catch (err) { showError("Export failed: " + err); }
+        });
+      }
+      if (searchEl) { searchEl.addEventListener("input", () => { lastQuery = searchEl.value; if (chronEl._entries) renderChronology(chronEl._entries, lastQuery, sysToggle.checked); }); }
+      if (sysToggle) { sysToggle.addEventListener("change", () => { if (chronEl._entries) renderChronology(chronEl._entries, lastQuery, sysToggle.checked); }); }
 
-  // initial empty state
-  renderUnits([]);
-  renderDispo([]);
-  document.getElementById("auxBox").innerHTML = '<div class="empty">No call / cross-reference / history yet. Fetch to load.</div>';
-})();
-</script>
+      // Poll server for push via POST /receive -> fetch bundle when received
+      let received = false;
+      async function pollReceive() {
+        try {
+          const r = await fetch("/view-event-status");
+          if (!r.ok) return;
+          const s = await r.json();
+          if (s.received && s.eventNumber && !received) {
+            received = true;
+            setReceivedUI(s.eventNumber);
+            fetchBundle();
+          }
+        } catch (e) {/* ignore */ }
+      }
+      pollReceive();
+      setInterval(pollReceive, 1500);
+
+      // initial empty state
+      renderUnits([]);
+      renderDispo([]);
+      document.getElementById("auxBox").innerHTML = '<div class="empty">No call / cross-reference / history yet. Fetch to load.</div>';
+    })();
+  </script>
 </body>
+
 </html>

@@ -28,14 +28,14 @@ Invoke Outbound Service with the dispatcher's session token and the event
 number. The app stores the latest pair in memory
 (`app/main.py:_store`) and never echoes the token back.
 
-The OnCall payload is tolerant of field naming: PascalCase (`AccessToken`,
+The OnCall payload is tolerant of field naming: PascalCase (`SessionToken`,
 `EventNumber`), camelCase, plus a `NewParameter1/2/3` fallback because OnCall
-CRE cannot send the JWT through the AccessToken field (known OnCall bug).
+CRE cannot send the JWT through the SessionToken field (known OnCall bug).
 See `_extract_token_and_event` in `app/main.py`.
 
 The frontend (`GET /event-view`) polls `GET /view-event-status` every 1.5s.
 Once a push arrives it locks the manual inputs and fetches the bundle.
-Manual entry (AccessToken + EventNumber in the top bar) remains available
+Manual entry (SessionToken + EventNumber in the top bar) remains available
 before any push arrives.
 
 `POST /view-event-clear` resets the stored pair (test/diagnostic helper).

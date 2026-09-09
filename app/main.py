@@ -16,10 +16,10 @@ app = FastAPI()
 
 STATIC_HTML = Path(__file__).parent / "static" / "event-view.html"
 
-# In-memory store for the latest AccessToken + EventNumber pushed from OnCall CRE.
-# Do not expose AccessToken to the client; only store server-side for proxying to CAD.
+# In-memory store for the latest SessionToken + EventNumber pushed from OnCall CRE.
+# Do not expose SessionToken to the client; only store server-side for proxying to CAD.
 # ponytail: single-slot store serves one dispatcher session; move to per-session keys when multiple simultaneous viewers matter.
-_store: dict[str, Any] = {"accessToken": None, "eventNumber": None}
+_store: dict[str, Any] = {"sessionToken": None, "eventNumber": None}
 
 ONCALL_API_BASE = os.getenv("ONCALL_API_BASE", "https://oncallvos2.southeastasia.cloudapp.azure.com:8080")
 
@@ -36,12 +36,12 @@ BUNDLE_PATHS = {
 
 def _extract_token_and_event(payload: dict[str, Any]) -> tuple[str | None, str | None]:
     # PascalCase (OnCall CRE) + camelCase + NewParameter* fallback:
-    # OnCall has a bug where the AccessToken field cannot be used, so CRE sends
+    # OnCall has a bug where the SessionToken field cannot be used, so CRE sends
     # the JWT as NewParameter1 (or 2/3). Check case-insensitively.
     low = {k.lower(): v for k, v in payload.items() if isinstance(k, str)}
     token = (
-        payload.get("AccessToken")
-        or payload.get("accessToken")
+        payload.get("SessionToken")
+        or payload.get("sessionToken")
         or payload.get("access_token")
         or payload.get("token")
         or payload.get("Token")
@@ -66,15 +66,15 @@ def _extract_token_and_event(payload: dict[str, Any]) -> tuple[str | None, str |
     return token, event_number
 
 
-def _resolve(accessToken: str | None, eventNumber: str | None) -> tuple[str | None, str | None]:
+def _resolve(sessionToken: str | None, eventNumber: str | None) -> tuple[str | None, str | None]:
     # Prefer stored values pushed via POST /view-event; fallback to manual query params.
-    return _store.get("accessToken") or accessToken, _store.get("eventNumber") or eventNumber
+    return _store.get("sessionToken") or sessionToken, _store.get("eventNumber") or eventNumber
 
 
 def _missing() -> JSONResponse:
     return JSONResponse(
         status_code=400,
-        content={"error": "No AccessToken/EventNumber received yet. Waiting for OnCall push."},
+        content={"error": "No SessionToken/EventNumber received yet. Waiting for OnCall push."},
     )
 
 
@@ -90,9 +90,9 @@ async def post_view_event(payload: dict[str, Any]):
     if not token or not event_number:
         return JSONResponse(
             status_code=422,
-            content={"error": "AccessToken and EventNumber are required."},
+            content={"error": "SessionToken and EventNumber are required."},
         )
-    _store["accessToken"] = token
+    _store["sessionToken"] = token
     _store["eventNumber"] = event_number
     # Do not echo token back; only confirm receipt
     return JSONResponse(content={"status": "received", "eventNumber": event_number})
@@ -100,7 +100,7 @@ async def post_view_event(payload: dict[str, Any]):
 
 @app.get("/view-event-status")
 def get_view_event_status():
-    received = bool(_store.get("accessToken") and _store.get("eventNumber"))
+    received = bool(_store.get("sessionToken") and _store.get("eventNumber"))
     return JSONResponse(
         content={
             "received": received,
@@ -111,7 +111,7 @@ def get_view_event_status():
 
 @app.post("/view-event-clear")
 def post_view_event_clear():
-    _store["accessToken"] = None
+    _store["sessionToken"] = None
     _store["eventNumber"] = None
     return JSONResponse(content={"status": "cleared"})
 
@@ -150,16 +150,16 @@ async def _fetch_bundle(token: str, event_number: str) -> dict[str, Any]:
 
 
 @app.get("/event-view-bundle")
-async def get_event_view_bundle(accessToken: str | None = None, eventNumber: str | None = None):
-    token, event_number = _resolve(accessToken, eventNumber)
+async def get_event_view_bundle(sessionToken: str | None = None, eventNumber: str | None = None):
+    token, event_number = _resolve(sessionToken, eventNumber)
     if not token or not event_number:
         return _missing()
     return JSONResponse(content=await _fetch_bundle(token, event_number))
 
 
 @app.get("/event-view-data")
-async def get_event_view_data(accessToken: str | None = None, eventNumber: str | None = None):
-    token, event_number = _resolve(accessToken, eventNumber)
+async def get_event_view_data(sessionToken: str | None = None, eventNumber: str | None = None):
+    token, event_number = _resolve(sessionToken, eventNumber)
     if not token or not event_number:
         return _missing()
     data = await fetch_agency_event(token, event_number)
@@ -176,15 +176,28 @@ async def get_event_view_data(accessToken: str | None = None, eventNumber: str |
 
 @app.post("/export-events")
 async def post_export_events(payload: dict[str, Any]):
-    event_ids = payload.get("eventIds") or payload.get("EventIds")
+    print("export-events keys:", sorted(k for k in payload if isinstance(k, str)))  # ponytail: keys-only log, never token values; drop if log noise matters
+    # ponytail: list or lone string only; split here if callers ever send delimited lists
+    event_ids = payload.get("EventNumbers")
+    if isinstance(event_ids, str):
+        event_ids = [event_ids]
     if not event_ids:
         return JSONResponse(
             status_code=400,
-            content={"error": "eventIds must be a non-empty array of event IDs."},
+            content={"error": "EventNumbers must be a non-empty array of event IDs."},
         )
-    token = _store.get("accessToken")
+    if any("System." in i for i in event_ids):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "EventNumbers arrived as a .NET type name, not an event ID. Send the plain event number text from CRE."},
+        )
+    token, _ = _extract_token_and_event(payload)
+    token = token or _store.get("sessionToken")
     if not token:
         return _missing()
+    # ponytail: export push claims the single view slot so the page wakes up via /view-event-status
+    _store["sessionToken"] = token
+    _store["eventNumber"] = event_ids[0]
     results = await fetch_agency_events(token, event_ids)
     buf = build_export_workbook(event_ids, results)
     filename = f"export_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
