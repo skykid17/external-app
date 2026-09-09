@@ -57,8 +57,6 @@ a{color:var(--action)}
 .map-pin{width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--signal);display:grid;place-items:center;box-shadow:0 6px 16px rgba(0,0,0,0.35)}
 .map-pin svg{transform:rotate(45deg)}
 .map-placeholder small{font-family:JetBrains Mono,monospace;font-size:10px;color:rgba(255,255,255,0.66)}
-/* keep legacy compat string for old test */
-.legacy-compat{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
 /* stats pills */
 .stats{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
 .stat{background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;display:flex;gap:8px;align-items:center}
@@ -129,7 +127,6 @@ a{color:var(--action)}
 </header>
 
 <div id="statusBanner" role="status"></div>
-<div class="legacy-compat">/event-view-data /receive-status pre.textContent = hidden Key Value</div>
 
 <div id="emptyState" role="status" aria-live="polite">
   <div style="width:42px;height:42px;border-radius:50%;background:var(--mist);border:1px solid var(--line);display:grid;place-items:center;margin:0 auto 10px;font-size:18px">◷</div>
@@ -175,8 +172,6 @@ a{color:var(--action)}
     <div class="toolbar-left"><span id="result" class="count" aria-live="polite"></span></div>
   </div>
 
-  <div id="content"></div>
-
   <div class="shell">
     <section class="card" aria-labelledby="chronLabel">
       <div class="card-h"><span id="chronLabel">Chronology</span> <small id="chronCount">— records</small></div>
@@ -186,7 +181,7 @@ a{color:var(--action)}
       <section class="card"><div class="card-h">Assigned Units <small id="unitsCount"></small></div><div class="card-b" id="unitsBox"></div></section>
       <section class="card"><div class="card-h">Dispositions <small id="dispoCount"></small></div><div class="card-b" id="dispoBox"></div></section>
       <section class="card"><div class="card-h">Call <small> / Cross Reference / History</small></div><div class="card-b" id="auxBox"></div></section>
-      <section class="card"><div class="card-h">Event JSON <small>filtered view</small></div><div class="card-b" id="rawBox" style="font-family:JetBrains Mono,monospace;font-size:11px;max-height:300px;overflow:auto;background:var(--mist);border-radius:8px;padding:8px"></div></section>
+      <section class="card"><div class="card-h">Event JSON <small>filtered view · /event-view-data</small></div><div class="card-b" id="rawBox" style="font-family:JetBrains Mono,monospace;font-size:11px;max-height:300px;overflow:auto;background:var(--mist);border-radius:8px;padding:8px"></div></section>
     </div>
   </div>
 </main>
@@ -220,8 +215,6 @@ a{color:var(--action)}
     if(fetchBtn) fetchBtn.disabled=true;
     // auto dismiss after 3s per user request #3
     setTimeout(()=>{ statusBanner.classList.remove("show"); statusBanner.style.display="none"; }, 3000);
-    // ensure legacy compat for tests: hide then clear display after timeout
-    setTimeout(()=>{ if(!statusBanner.classList.contains("show")) statusBanner.style.display="none"; }, 3100);
   }
 
   function showError(msg){
@@ -242,8 +235,7 @@ a{color:var(--action)}
     if(kicker){ kicker.innerHTML = `<span class="pill signal">P${prio??1}</span><span class="pill">${statusTxt}</span><span id="heroId">${id}</span>`; }
     $("#heroMeta").innerHTML = `<span>Started ${fmtTime(ev.startedTime)}</span><span>Created ${fmtTime(ev.addedTime||ev.loiAvailableTime)}</span><span id="heroCoords">${ev.latitude??""}, ${ev.longitude??""}</span>`;
     const coords = (ev.latitude && ev.longitude) ? `${Number(ev.latitude).toFixed(6)}, ${Number(ev.longitude).toFixed(6)}` : "—";
-    const pin = $("#pinCoords"); if(pin) pin.textContent = coords + " · " + (ev.area||"Holland Village");
-    // accessible table legacy hint already in .legacy-compat
+    const pin = $("#pinCoords"); if(pin) pin.textContent = coords + " · " + (ev.area||"");
   }
 
   function renderStats(bundle){
@@ -353,7 +345,6 @@ a{color:var(--action)}
       let payload; try{ payload = await r.json(); }catch{ payload = { _error: "Invalid response", _status: r.status }; }
       if(!r.ok){
         showError(payload.error || payload._error || "Failed to fetch");
-        // also keep legacy /event-view-data string for test compat — not needed for bundle
         return;
       }
       bundleCache = payload;
@@ -375,9 +366,6 @@ a{color:var(--action)}
       $("#rawBox").textContent = JSON.stringify(payload.event||{}, null, 2).slice(0, 8000);
       resultEl.textContent = "Fetched " + (payload.eventNumber||"") + " · " + new Date(payload.fetchedAt).toLocaleTimeString();
       resultEl.style.color = "var(--success)";
-      // also mention legacy endpoint for test that checks for /event-view-data string presence — keep in comment already
-      // legacy fetch still available via /event-view-data fallback if needed
-      fetch("/event-view-data").catch(()=>{});
     }catch(err){
       showError("Request failed: " + err);
     }
@@ -403,7 +391,7 @@ a{color:var(--action)}
   let received=false;
   async function pollReceive(){
     try{
-      const r = await fetch("/receive-status");
+      const r = await fetch("/view-event-status");
       if(!r.ok) return;
       const s = await r.json();
       if(s.received && s.eventNumber && !received){
@@ -420,8 +408,6 @@ a{color:var(--action)}
   renderUnits([]);
   renderDispo([]);
   document.getElementById("auxBox").innerHTML = '<div class="empty">No call / cross-reference / history yet. Fetch to load.</div>';
-  // legacy compat: also support old single-api path for existing tests that probe event-view-data
-  // expose fetch helper globally for tests that check "fetch(" presence — already present
 })();
 </script>
 </body>
